@@ -1,0 +1,39 @@
+{
+    "workbench.colorTheme": "Adapta Nokto",
+    "python.pythonPath": "C:\\Users\\lazyp\\anaconda3\\envs\\openmmlab",
+    "python.terminal.activateEnvironment": true,
+    "workbench.editorAssociations": {
+        "*.java": "default"
+    },
+    "[python]": {
+        "editor.formatOnType": true
+    },
+    "notebook.output.textLineLimit": 100,
+    "jupyter.interactiveWindow.creationMode": "perFile",
+    "terminal.integrated.tabs.defaultColor": "terminal.ansiBlue",
+    "terminal.integrated.profiles.windows": {
+
+
+
+        "PowerShell": {
+            "source": "PowerShell",
+            "icon": "terminal-powershell"
+        },
+        "Command Prompt": {
+            "path": [
+                "${env:windir}\\Sysnative\\cmd.exe",
+                "${env:windir}\\System32\\cmd.exe"
+            ],
+            "args": [],
+            "icon": "terminal-cmd"
+        },
+        "Git Bash": {
+            "source": "Git Bash"
+        }
+    },
+    "isort.interpreter": [
+        "C:\\Users\\lazyp\\anaconda3\\envs\\openmmlab\\python.exe"
+    ],
+    "terminal.integrated.cwd": "C:\\Users\\lazyp\\mmpose",
+    "terminal.integrated.defaultProfile.windows": "Command Prompt"
+}
