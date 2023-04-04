@@ -139,7 +139,7 @@ def main():
 
     print('Running inference...')
     for frame_id, cur_frame in enumerate(mmcv.track_iter_progress(video)):    
-# get the detection results of current frame
+        # get the detection results of current frame
         # the resulting box is (x1, y1, x2, y2)
         mmdet_results = inference_detector(det_model, cur_frame)
 
@@ -160,7 +160,9 @@ def main():
             dataset_info=dataset_info,
             return_heatmap=return_heatmap,
             outputs=output_layer_names)
-
+        #If no person detected, continue to next frame
+        if not pose_results:
+            continue
         # show the results
         vis_frame = vis_pose_result(
             pose_model,
@@ -181,7 +183,8 @@ def main():
         
         falldata1= pd.DataFrame(keypoints)
         frame_list.append(falldata1)
-        final_list=pd.concat(frame_list)
+        final_list = pd.concat(frame_list, keys=range(len(frame_list)))
+
 
         #dffall=falldata1.concat({'falldata1':'Frame'},axis=0,join='outer',ignore_index=False,keys=None,levels=None,verify_integrity=False,sort=False,copy=True)
         #dffall=falldata1.append({'falldata1':'Frame'},ignore_index=True)
@@ -194,16 +197,18 @@ def main():
 
         if save_out_video:
             videoWriter.write(vis_frame)
-            final_list.to_json('testtesttest.json')
             #falldata1.to_excel('dffall.xlsx', index=False)
 
         if args.show and cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
+    final_list.to_json('testtesttest.json')
+
     if save_out_video:
         videoWriter.release()
     if args.show:
         cv2.destroyAllWindows()
+        video.release()
 
 if __name__ == '__main__':
     main()
