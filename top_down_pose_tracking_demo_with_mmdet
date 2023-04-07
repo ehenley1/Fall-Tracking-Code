@@ -3,6 +3,7 @@ import os
 import warnings
 from argparse import ArgumentParser
 import json
+from json import JSONEncoder
 import cv2
 import mmcv
 import numpy as np
@@ -24,6 +25,11 @@ class IgnoreCircularReferenceEncoder(json.JSONEncoder):
             return super().default(obj)
         except TypeError:
             return str(obj)
+class NumpyArrayEncoder(JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.float32):
+            return float(obj)
+        return super(NumpyArrayEncoder, self).default(obj)
 
 def main():
     """Visualize the demo images.
@@ -248,11 +254,25 @@ def main():
                 return obj.tolist()
             return obj
 
-        all_pose_results_serializable = json.loads(json.dumps(all_pose_results, default=ndarray_to_list, cls=IgnoreCircularReferenceEncoder))
+        def remove_circular_references(obj, visited=None):
+            if visited is None:
+                visited = set()
+            if id(obj) in visited:
+                return None
+            visited.add(id(obj))
+            if isinstance(obj, list):
+                return [remove_circular_references(item, visited) for item in obj]
+            elif isinstance(obj, dict):
+                return {k: remove_circular_references(v, visited) for k, v in obj.items()}
+            elif isinstance(obj, np.ndarray):
+                return obj.tolist()
+            else:
+                return obj
+        all_pose_results_cleaned = remove_circular_references(all_pose_results)
 
         with open(args.out_json, 'w') as f:
-            json.dump(all_pose_results_serializable, f)
-
+            json.dump(all_pose_results_cleaned, f, cls=NumpyArrayEncoder)
+    
     if save_out_video:
         videoWriter.release()
     if args.show:
