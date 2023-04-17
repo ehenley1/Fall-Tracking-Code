@@ -1,0 +1,36 @@
+import os
+import sys
+from pathlib import Path
+
+# Make sure to add the path to the mmpose directory if it's not already in the sys.path
+mmpose_dir = 'path/to/mmpose'  # Replace with the path to your mmpose directory
+sys.path.append(mmpose_dir)
+
+# Import the main function from your original script
+from top_down_pose_estimation import main as process_video
+
+def process_videos(video_paths, output_dir, args):
+    for video_path in video_paths:
+        print(f"Processing video: {video_path}")
+        output_path = os.path.join(output_dir, os.path.basename(video_path))
+        args.video_path = video_path
+        args.out_video_root = output_path
+        process_video(args)
+
+if __name__ == "__main__":
+    from argparse import ArgumentParser
+    from top_down_pose_estimation import parse_args
+
+    parser = ArgumentParser()
+    parser.add_argument('--video-dir', type=str, required=True, help='Directory containing video files')
+    parser.add_argument('--output-dir', type=str, required=True, help='Output directory for processed videos')
+    args = parse_args()
+
+    video_dir = Path(args.video_dir)
+    output_dir = Path(args.output_dir)
+
+    video_files = [str(video_path) for video_path in video_dir.glob("*.mp4")]
+    process_videos(video_files, output_dir, args)
+
+#TO RUN BATCH PROCESSING
+# python C:/Users/lazyp/Fall_Tracker/batch_process_videos.py --video-dir C:/Users/lazyp/Fall_Tracker/Videos --output-dir C:/Users/lazyp/Fall_Tracker/Output
