@@ -1,0 +1,85 @@
+import cv2
+import numpy as np
+import os
+
+def resize_and_normalize_video(input_video_path, output_video_path, target_fps):
+    # Read the input video
+    input_video = cv2.VideoCapture(input_video_path)
+    if not input_video.isOpened():
+        print(f"Error: Could not open the input video: {input_video_path}")
+        return
+
+    # Get video dimensions and frame rate
+    width = int(input_video.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(input_video.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fps = int(input_video.get(cv2.CAP_PROP_FPS))
+
+    # Calculate the frame rate ratio
+    frame_rate_ratio = fps / target_fps
+
+    # Define the output video codec and writer
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v' if output_video_path.endswith('.mp4') else 'XVID')
+    output_video = cv2.VideoWriter(output_video_path, fourcc, target_fps, (244, 244))
+
+    # Initialize variables for linear interpolation
+    prev_frame = None
+    next_frame = None
+    alpha = 0
+
+    while True:
+        ret, next_frame = input_video.read()
+        if not ret:
+            break
+
+        # Process and write the interpolated frame
+        if prev_frame is not None:
+            # Resize the frames to 244x244 pixels
+            prev_resized_frame = cv2.resize(prev_frame, (244, 244), interpolation=cv2.INTER_LINEAR)
+            next_resized_frame = cv2.resize(next_frame, (244, 244), interpolation=cv2.INTER_LINEAR)
+
+            # Linearly interpolate between the two frames
+            interpolated_frame = cv2.addWeighted(prev_resized_frame, 1 - alpha, next_resized_frame, alpha, 0)
+
+            # Normalize pixel values to be between 0 and 1
+            normalized_frame = interpolated_frame / 255.0
+
+            # Convert the frame back to 8-bit unsigned int format for writing to a video file
+            output_frame = (normalized_frame * 255).astype(np.uint8)
+
+            # Write the processed frame to the output video
+            output_video.write(output_frame)
+
+            # Increment alpha based on the frame rate ratio
+            alpha += frame_rate_ratio
+            if alpha >= 1:
+                alpha = 0
+                prev_frame = next_frame
+        else:
+            prev_frame = next_frame
+
+    # Release the input and output video objects
+    input_video.release()
+    output_video.release()
+    cv2.destroyAllWindows()
+
+def process_video(input_video_path, target_fps):
+    # Change the output video name to have "_processed" at the end
+    input_video_name, ext = os.path.splitext(os.path.basename(input_video_path))
+    output_video_name = input_video_name + "_processed" + ext
+
+    output_video_path = os.path.join(output_directory, output_video_name)
+
+    resize_and_normalize_video(input_video_path, output_video_path, target_fps)
+
+def process_videos_in_directory(directory_path, target_fps):
+    # Process all videos in the specified directory ending with .avi or .mp4
+    for filename in os.listdir(directory_path):
+        if filename.endswith('.avi') or filename.endswith('.mp4'):
+            input_video_path = os.path.join(directory_path, filename)
+            process_video(input_video_path, target_fps)
+
+
+directory_path = "C:/Users/ethan02/Documents/Fall Tracking Project/ah"
+output_directory = "C:/Users/ethan02/Documents/Fall Tracking Project/3. Pre-Processed Videos"
+target_fps = 30 # Set the target frame rate
+process_videos_in_directory(directory_path, target_fps)
