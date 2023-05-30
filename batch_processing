@@ -1,36 +1,54 @@
 import os
-import sys
-from pathlib import Path
+import shutil
+import subprocess 
+import zipfile
 
-# Make sure to add the path to the mmpose directory if it's not already in the sys.path
-mmpose_dir = 'path/to/mmpose'  # Replace with the path to your mmpose directory
-sys.path.append(mmpose_dir)
+#Directory of video files
+video_dir = "C:\\Users\\Helmet_pro\\Falls_Study\\TEST_INPUT"
 
-# Import the main function from your original script
-from top_down_pose_estimation import main as process_video
+#Directory for JSON files
+json_dir = "C:\\Users\\Helmet_pro\\Falls_Study\\TEST_OUTPUT"
 
-def process_videos(video_paths, output_dir, args):
-    for video_path in video_paths:
-        print(f"Processing video: {video_path}")
-        output_path = os.path.join(output_dir, os.path.basename(video_path))
-        args.video_path = video_path
-        args.out_video_root = output_path
-        process_video(args)
+#Path to OpenPoseDemo.exe
+openpose_exe = "C:\\Users\\Helmet_pro\\openpose\\build\\x64\\Release\\OpenPoseDemo.exe"
 
-if __name__ == "__main__":
-    from argparse import ArgumentParser
-    from top_down_pose_estimation import parse_args
+#OpenPose flags
+#net_resolution = "656x368"   #determines resolution of the pose estimation
+net_resolution = "1712x960" #MAX RESOLUTION RECOMMENDED FOR BODY_25B
+#net_resolution = "-1x368"
+scale_number  = 4
+scale_gap = 0.25
+model_pose = "BODY_25B"
 
-    parser = ArgumentParser()
-    parser.add_argument('--video-dir', type=str, required=True, help='Directory containing video files')
-    parser.add_argument('--output-dir', type=str, required=True, help='Output directory for processed videos')
-    args = parse_args()
+#Loop over video_dir
+for filename in os.listdir(video_dir):
+    #Check if file is a video
+    if filename.endswith(".avi"):
+        #Path to video file
+        video_file = os.path.join(video_dir, filename)
 
-    video_dir = Path(args.video_dir)
-    output_dir = Path(args.output_dir)
+        # Create a subdirectory for the video's output
+        video_output_dir = os.path.join(json_dir, os.path.splitext(filename)[0])
+        os.makedirs(video_output_dir, exist_ok=True)
 
-    video_files = [str(video_path) for video_path in video_dir.glob("*.mp4")]
-    process_videos(video_files, output_dir, args)
+        #Run OpenPose
+        command = [openpose_exe, "--video", video_file, "--model_pose", model_pose, 
+                   "--net_resolution", net_resolution, "--scale_number", str(scale_number), 
+                   "--scale_gap", str(scale_gap), "--write_json", json_dir]
+        subprocess.run(command)
 
-#TO RUN BATCH PROCESSING
-# python C:/Users/lazyp/Fall_Tracker/batch_process_videos.py --video-dir C:/Users/lazyp/Fall_Tracker/Videos --output-dir C:/Users/lazyp/Fall_Tracker/Output
+        #Move JSON Files to new zip file
+        for file in os.listdir(json_dir):
+            if file.endswith(".json"):
+                shutil.move(os.path.join(json_dir, file), video_output_dir)
+
+
+         # Zip the output directory
+        with zipfile.ZipFile(f"{video_output_dir}.zip", 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for root, dirs, files in os.walk(video_output_dir):
+                for file in files:
+                    zipf.write(os.path.join(root, file), 
+                               os.path.relpath(os.path.join(root, file), video_output_dir))
+        #Remove original file
+        shutil.rmtree(video_output_dir)
+        
