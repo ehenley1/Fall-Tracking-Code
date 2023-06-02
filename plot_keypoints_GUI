@@ -1,0 +1,83 @@
+import json
+import matplotlib.pyplot as plt
+import os
+import numpy as np
+import tkinter as tk
+from tkinter import filedialog
+from tkinter import messagebox
+
+# Initialize lists to store x and y coordinates of the head keypoints
+x_coords = []
+y_coords = []
+times = []
+
+# Create a GUI window
+root = tk.Tk()
+root.withdraw()  # Hide the main window
+
+# Ask the user to select the JSON files
+json_dir = filedialog.askdirectory(title="Select the directory containing JSON files")
+
+# Iterate over all files in the JSON directory
+for i, filename in enumerate(sorted(os.listdir(json_dir))):
+    # Check if the file is a JSON file
+    if filename.endswith(".json"):
+        # Full path to the JSON file
+        json_file = os.path.join(json_dir, filename)
+        
+        # Open the JSON file and load the keypoints
+        with open(json_file) as f:
+            data = json.load(f)
+            people = data['people']
+            
+            # Iterate over all people detected in the frame
+            for person in people:
+                keypoints = person['pose_keypoints_2d']
+                
+                # The head keypoint is at index 0 (0-indexed)
+                # Each keypoint has 3 values: x, y, and a confidence score
+                x = keypoints[0]
+                y = keypoints[1]
+                c = keypoints[2]  # confidence score
+                
+                # Check if the head keypoint is detected (confidence score > 0)
+                if c > 0:
+                    x_coords.append(x)
+                    y_coords.append(y)
+                    times.append(i)  # assuming each file represents one unit of time
+
+# Count the number of keypoints
+keypoint_count = len(x_coords)
+
+# Print the count
+print(f"Number of keypoints: {keypoint_count}")
+
+# Plot the head movement
+plt.figure(figsize=(10, 5))
+
+plt.subplot(1, 2, 1)
+plt.plot(times, x_coords)
+plt.title('Head X Coordinate Over Time')
+plt.xlabel('Time')
+plt.ylabel('Head X Coordinate')
+
+plt.subplot(1, 2, 2)
+plt.plot(times, y_coords)
+plt.title('Head Y Coordinate Over Time')
+plt.xlabel('Time')
+plt.ylabel('Head Y Coordinate')
+
+plt.tight_layout()
+
+# Ask the user to select the output directory and filename
+output_dir = filedialog.askdirectory(title="Select the output directory")
+output_filename = filedialog.asksaveasfilename(initialdir=output_dir, title="Select output filename", filetypes=(("jpeg files", "*.jpg"), ("all files", "*.*")))
+
+# Save the plot
+plt.savefig(output_filename)
+
+# Show a message box to indicate that the plot has been saved
+messagebox.showinfo("Information", f"The plot has been saved as {output_filename}")
+
+# Show the plot
+plt.show()
