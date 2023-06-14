@@ -2,23 +2,48 @@ import os
 import shutil
 import subprocess 
 import zipfile
+import tkinter as tk
+from tkinter import filedialog, ttk, messagebox, simpledialog
 
 #Directory of video files
-video_dir = "C:\\Users\\Helmet_pro\\Falls_Study\\TEST_INPUT"
+video_dir = filedialog.askdirectory(title="Select the directory containing video files")
 
 #Directory for JSON files
-json_dir = "C:\\Users\\Helmet_pro\\Falls_Study\\TEST_OUTPUT"
+json_dir = filedialog.askdirectory(title="Select the directory containing JSON files")
 
 #Path to OpenPoseDemo.exe
 openpose_exe = "C:\\Users\\Helmet_pro\\openpose\\build\\x64\\Release\\OpenPoseDemo.exe"
 
 #OpenPose flags
-#net_resolution = "656x368"   #determines resolution of the pose estimation
-net_resolution = "1712x960" #MAX RESOLUTION RECOMMENDED FOR BODY_25B
-#net_resolution = "-1x368"
 scale_number  = 4
 scale_gap = 0.25
 model_pose = "BODY_25B"
+
+# Create GUI Window
+root = tk.Tk()
+root.withdraw()
+
+# Create a new tkinter window
+net_res_window = tk.Toplevel(root)
+
+# Create a label
+ttk.Label(net_res_window, text="Select Net Resolution:").grid(column=0, row=0)
+
+# Create a combobox for net resolution selection
+net_res_combobox = ttk.Combobox(net_res_window, values=["-1x368", "1712x960", "656x368"])
+net_res_combobox.grid(column=1, row=0)
+
+# Function to set net_resolution and continue with the script
+def continue_script():
+    global net_resolution
+    net_resolution = net_res_combobox.get()
+    net_res_window.destroy()
+
+# Create a button that will get the combobox data and continue with the script
+ttk.Button(net_res_window, text="OK", command=continue_script).grid(column=1, row=1)
+
+# Start the tkinter main loop
+root.mainloop()
 
 #Loop over video_dir
 for filename in os.listdir(video_dir):
@@ -32,7 +57,7 @@ for filename in os.listdir(video_dir):
         os.makedirs(video_output_dir, exist_ok=True)
 
         #Run OpenPose
-        command = [openpose_exe, "--video", video_file, "--model_pose", model_pose, 
+        command = [openpose_exe, "--video", video_file, 
                    "--net_resolution", net_resolution, "--scale_number", str(scale_number), 
                    "--scale_gap", str(scale_gap), "--write_json", json_dir]
         subprocess.run(command)
@@ -42,8 +67,7 @@ for filename in os.listdir(video_dir):
             if file.endswith(".json"):
                 shutil.move(os.path.join(json_dir, file), video_output_dir)
 
-
-         # Zip the output directory
+        # Zip the output directory
         with zipfile.ZipFile(f"{video_output_dir}.zip", 'w', zipfile.ZIP_DEFLATED) as zipf:
             for root, dirs, files in os.walk(video_output_dir):
                 for file in files:
@@ -51,4 +75,3 @@ for filename in os.listdir(video_dir):
                                os.path.relpath(os.path.join(root, file), video_output_dir))
         #Remove original file
         shutil.rmtree(video_output_dir)
-        
