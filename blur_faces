@@ -1,6 +1,10 @@
 import cv2
 import numpy as np
+import os
+import glob
+import dlib
 
+#Create the actual blur method to be called upon face detection
 def blur_faces(frame, faces, k=30):
     for (x, y, w, h) in faces:
         face = frame[y:y+h, x:x+w]
@@ -8,47 +12,76 @@ def blur_faces(frame, faces, k=30):
         frame[y:y+h, x:x+w] = blurred_face
     return frame
 
-# Load the cascade
-face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
+#Training used for facial detection model
+face_cascade = cv2.CascadeClassifier("C:/Users/Helmet_pro/.conda/pkgs/opencv-4.6.0-py37hf11a4ad_3/Library/etc/haarcascades/haarcascade_frontalface_default.xml")
+#OprnCV facial detection model
+modelFile = "C:/Users/Helmet_pro/.conda/pkgs/opencv-4.6.0-py37hf11a4ad_3/Library/include/opencv2/face/res10_300x300_ssd_iter_140000_fp16.caffemodel"
+#Configuration file for openCV model
+configFile = "C:/Users/Helmet_pro/.conda/pkgs/opencv-4.6.0-py37hf11a4ad_3/Library/include/opencv2/face/deploy.prototxt"
+#Net for openCV model
+net = cv2.dnn.readNetFromCaffe(configFile, modelFile)
+#dlib call to get the actual detecting algorithm
+detector = dlib.get_frontal_face_detector()
+#Input directory
+input_dir = "C:/Users/Helmet_pro/Falls_Study/TEST_INPUT"  
+#Output directory 
+output_dir = "C:/Users/Helmet_pro/Falls_Study/TEST_OUTPUT" 
+#Specifies files in Input directory 
+video_files = glob.glob(os.path.join(input_dir, "*.mp4")) 
 
-# Open the video
-cap = cv2.VideoCapture('video.mp4') # replace 'video.mp4' with your video file
+#Loop opening each video and blurring the faces in it
+for video_file in video_files:
+    print(f"Processing file {video_file}")
+    cap = cv2.VideoCapture(video_file)
 
-# Get video properties
-frame_width = int(cap.get(3))
-frame_height = int(cap.get(4))
+    if not cap.isOpened():
+        print(f"Could not open video file {video_file}")
+        continue
 
-# Define the codec and create a VideoWriter object
-fourcc = cv2.VideoWriter_fourcc(*'DIVX') 
-out = cv2.VideoWriter('blurred_faces_output.avi', fourcc, 20.0, (frame_width,frame_height))
+    frame_width = int(cap.get(3))
+    frame_height = int(cap.get(4))
 
-while True:
-    # Read the frame
-    ret, img = cap.read()
-    if not ret:
-        break
+    out_file = os.path.join(output_dir, os.path.basename(video_file))
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v') 
+    out = cv2.VideoWriter(out_file, fourcc, 20.0, (frame_width,frame_height))
 
-    # Convert to grayscale
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+frame_count = 0
+try:
+    while True:
+        ret, img = cap.read()
+        if not ret:
+            print(f"Finished reading frames from file {video_file}")
+            break
 
-    # Detect the faces
-    faces = face_cascade.detectMultiScale(gray, 1.1, 4)
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    # Blur the faces
-    img = blur_faces(img, faces)
+        faces_haar = face_cascade.detectMultiScale(gray, 1.05, 6)
 
-    # Write the frame into the file
-    out.write(img)
+        for (x, y, w, h) in faces_haar:
+            img = blur_faces(img, [(x, y, w, h)])
 
-    # Display
-    cv2.imshow('img', img)
+        blob = cv2.dnn.blobFromImage(cv2.resize(img, (300, 300)), 1.0, (300, 300), (104.0, 177.0, 123.0))
+        net.setInput(blob)
+        detections = net.forward()
 
-    # Stop if escape key is pressed
-    k = cv2.waitKey(30) & 0xff
-    if k==27:
-        break
+        (h, w) = img.shape[:2]
+        faces_dlib = detector(gray, 1)
+        faces_dlib = [(x.left(), x.top(), x.width(), x.height()) for x in faces_dlib]
+        
+        for (x, y, w, h) in faces_dlib:
+            img = blur_faces(img, [(x, y, w, h)])
 
-# Release the VideoCapture and VideoWriter objects
+        out.write(img)
+        cv2.imshow('img', img)
+        k = cv2.waitKey(30) & 0xff
+        if k == 27:
+            break
+
+        frame_count += 1
+    print(f"Processed {frame_count} frames from file {video_file}")
+except Exception as e:
+    print(f"Error processing video file {video_file}: {e}")
+
 cap.release()
 out.release()
 cv2.destroyAllWindows()
